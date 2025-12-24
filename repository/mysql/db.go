@@ -7,12 +7,22 @@ import (
 	"time"
 )
 
-type MysqlDB struct {
-	db *sql.DB
+type Config struct {
+	Username string
+	Password string
+	Host     string
+	Port     int
+	DBName   string
 }
 
-func New() *MysqlDB {
-	db, err := sql.Open("mysql", "myuser:mypassword@(localhost:3308)/mydb")
+type MysqlDB struct {
+	config Config
+	db     *sql.DB
+}
+
+func New(config Config) *MysqlDB {
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@(%s:%d)/%s",
+		config.Username, config.Password, config.Host, config.Port, config.DBName))
 	if err != nil {
 		panic(fmt.Errorf("Can't connect to mysql database: %v", err))
 	}
@@ -20,5 +30,5 @@ func New() *MysqlDB {
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
-	return &MysqlDB{db: db}
+	return &MysqlDB{config: config, db: db}
 }
