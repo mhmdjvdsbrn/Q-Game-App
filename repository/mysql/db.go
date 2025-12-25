@@ -24,7 +24,7 @@ func New(config Config) *MysqlDB {
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@(%s:%d)/%s",
 		config.Username, config.Password, config.Host, config.Port, config.DBName))
 	if err != nil {
-		panic(fmt.Errorf("Can't connect to mysql database: %v", err))
+		panic(fmt.Errorf("can't connect to mysql database: %v", err))
 	}
 
 	db.SetConnMaxLifetime(time.Minute * 3)

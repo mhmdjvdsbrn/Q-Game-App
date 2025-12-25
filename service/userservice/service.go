@@ -148,7 +148,7 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 
 	//compare user.password with the req.password
 	if user.Password != getMD5Hash(req.Password) {
-		return LoginResponse{}, fmt.Errorf("usernameeeee or password is wrong")
+		return LoginResponse{}, fmt.Errorf("usernamee or password is wrong")
 
 		if err != nil {
 			return LoginResponse{}, fmt.Errorf("unexpected error %w", err)
