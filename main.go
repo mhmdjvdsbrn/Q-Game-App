@@ -4,7 +4,8 @@ import (
 	"log"
 	"q-game-app/config"
 	"q-game-app/delivery/httpserver"
-	"q-game-app/repository/migratior"
+	//"q-game-app/repository/migratior"
+	"q-game-app/validator/uservalidator"
 	"time"
 
 	"q-game-app/repository/mysql"
@@ -25,7 +26,7 @@ const (
 	DBUserPass = "mypassword"
 	DBHost     = "localhost"
 	DBName     = "mydb"
-	DBPort     = 3308
+	DBPort     = 3306
 )
 
 func main() {
@@ -46,23 +47,22 @@ func main() {
 			Host:     DBHost,
 		},
 	}
-	mgr := migratior.New(cfg.Mysql)
-	mgr.Down()
-	authSvc, userSvc := setupServices(cfg)
-
-	server := httpserver.New(cfg, authSvc, userSvc)
+	//mgr := migratior.New(cfg.Mysql)
+	//mgr.Up()
+	authSvc, userSvc, userValidator := setupServices(cfg)
+	
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator)
 	server.Serve()
 
 	log.Println("Starting server on :8080...")
 }
-func setupServices(cfg config.Config) (*authservice.Service, *userservice.Service) {
-	// auth service pointer
+func setupServices(cfg config.Config) (authservice.Service, userservice.Service, uservalidator.Validator) {
 	authSvc := authservice.New(cfg.Auth)
 
-	// mysql repo pointer
 	mysqlRepo := mysql.New(cfg.Mysql)
 
 	userSvc := userservice.New(mysqlRepo, authSvc)
+	userValidator := uservalidator.New(mysqlRepo)
 
-	return authSvc, userSvc
+	return authSvc, userSvc, userValidator
 }

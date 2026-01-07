@@ -26,27 +26,24 @@ type Service struct {
 }
 
 // New now returns pointer
-func New(cfg Config) *Service {
-	return &Service{
+func New(cfg Config) Service {
+	return Service{
 		config: cfg,
 	}
 }
 
 // CreateAccessToken creates JWT access token
-func (s *Service) CreateAccessToken(user entity.User) (string, error) {
+func (s Service) CreateAccessToken(user entity.User) (string, error) {
 	return s.createToken(user.ID, s.config.AccessSubject, s.config.AccessExpirationTime)
 }
 
 // CreateRefreshToken creates JWT refresh token
-func (s *Service) CreateRefreshToken(user entity.User) (string, error) {
+func (s Service) CreateRefreshToken(user entity.User) (string, error) {
 	return s.createToken(user.ID, s.config.RefreshSubject, s.config.RefreshExpirationTime)
 }
 
 // ParseToken parses bearer token and validates it
-func (s *Service) ParseToken(bearerToken string) (*Claims, error) {
-	if s == nil {
-		return nil, fmt.Errorf("service not initialized")
-	}
+func (s Service) ParseToken(bearerToken string) (*Claims, error) {
 	if bearerToken == "" {
 		return nil, fmt.Errorf("token is empty")
 	}
@@ -78,7 +75,7 @@ func (s *Service) ParseToken(bearerToken string) (*Claims, error) {
 }
 
 // createToken generates a JWT token
-func (s *Service) createToken(userID uint, subject string, expireDuration time.Duration) (string, error) {
+func (s Service) createToken(userID uint, subject string, expireDuration time.Duration) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   subject,

@@ -1,7 +1,7 @@
 
 development:
   dialect: mysql
-  datasource: myuser:mypassword@tcp(localhost:3308)/mydb?parseTime=true
+  datasource: myuser:mypassword@tcp(localhost:3306)/mydb?parseTime=true
   dir: repository/mysql/migrations
   table: migrations
 

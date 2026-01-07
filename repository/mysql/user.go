@@ -4,22 +4,26 @@ import (
 	"database/sql"
 	"fmt"
 	"q-game-app/entity"
+	"q-game-app/pkg/errmsg"
+	"q-game-app/pkg/richerror"
 )
 
 func (d *MysqlDB) IsPhoneNumberUnique(phoneNumber string) (bool, error) {
+	const op = "mysql.IsPhoneNumberUnique"
 	var exists bool
 	err := d.db.QueryRow(`
         SELECT EXISTS(SELECT 1 FROM users WHERE phone_number = ?)
     `, phoneNumber).Scan(&exists)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to check phone number uniqueness: %w", err)
+		return false, richerror.New(op).WithErr(err).WithKind(richerror.KindUnexpected)
 	}
 
 	return !exists, nil // unique if not exists
 }
 
-func (d *MysqlDB) GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error) {
+func (d *MysqlDB) GetUserByPhoneNumber(phoneNumber string) (entity.User, error) {
+	const op = "mysql.GetUserByPhoneNumber"
 	row := d.db.QueryRow(`
         SELECT id, name, phone_number, password
         FROM users
@@ -29,12 +33,13 @@ func (d *MysqlDB) GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, e
 	user, err := scanUser(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return entity.User{}, false, nil
+			return entity.User{}, richerror.New(op).WithMessage(errmsg.ErrorMsgNotFound).WithKind(richerror.KindNotFound)
 		}
-		return entity.User{}, false, fmt.Errorf("failed to get user by phone number: %w", err)
+		return entity.User{}, richerror.New(op).WithMessage(errmsg.ErrorMsgCantScanQueryResult)
+
 	}
 
-	return user, true, nil
+	return user, nil
 }
 
 func (d *MysqlDB) RegisterUser(u entity.User) (entity.User, error) {
@@ -66,9 +71,9 @@ func (d *MysqlDB) GetUserByID(userID uint) (entity.User, error) {
 	user, err := scanUser(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return entity.User{}, fmt.Errorf("user not found")
+			return entity.User{}, richerror.New("mysql.GetUserByID")
 		}
-		return entity.User{}, fmt.Errorf("failed to get user by ID: %w", err)
+		return entity.User{}, richerror.New("mysql.GetUserByID")
 	}
 
 	return user, nil
