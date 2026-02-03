@@ -5,6 +5,7 @@ import (
 	"log"
 	cfg "q-game-app/config"
 	"q-game-app/delivery/httpserver"
+	"q-game-app/repository/migratior"
 
 	"q-game-app/validator/uservalidator"
 
@@ -48,8 +49,8 @@ func main() {
 			Host:     cfg.DBHost,
 		},
 	}
-	//mgr := migratior.New(cfg.Mysql)
-	//mgr.Up()
+	mgr := migratior.New(cfg.Mysql)
+	mgr.Up()
 	authSvc, userSvc, userValidator := setupServices(cfg)
 
 	server := httpserver.New(cfg, authSvc, userSvc, userValidator)
