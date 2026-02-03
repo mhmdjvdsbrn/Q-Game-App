@@ -1,0 +1,9 @@
+---
+type: yml
+auth:
+  sign_key: parent1
+
+mysql:
+  host: localhost
+  port: 3308
+  db_name: mydb
