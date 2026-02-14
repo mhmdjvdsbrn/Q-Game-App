@@ -1,0 +1,23 @@
+---
+type: yml
+auth:
+  sign_key: jwt_secret
+
+http_server:
+  port: 8080
+
+mysql:
+  port: 3306
+  host: localhost
+  db_name: mydb
+  username: myuser
+  password: mypassword
+
+redis:
+  port: 6380
+  host: localhost
+  db: 0
+  password: ""
+
+matching_service:
+  waiting_timeout: "2m"

@@ -1,55 +1,35 @@
 package userservice
 
 import (
-	"errors"
-	"fmt"
+	"crypto/md5"
+	"encoding/hex"
 	"q-game-app/entity"
-	"q-game-app/pkg/phonenumber"
 )
 
 type Repository interface {
-	IsPhoneNumberUnique(phoneNumber string) (bool, error)
 	RegisterUser(u entity.User) (entity.User, error)
+	GetUserByPhoneNumber(phoneNumber string) (entity.User, error)
+	GetUserByID(userID uint) (entity.User, error)
+}
+
+type AuthGenerator interface {
+	CreateAccessToken(user entity.User) (string, error)
+	CreateRefreshToken(user entity.User) (string, error)
 }
 type Service struct {
+	auth AuthGenerator
 	repo Repository
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+// New now requires AuthGenerator
+func New(repo Repository, auth AuthGenerator) Service {
+	return Service{
+		auth: auth,
+		repo: repo,
+	}
 }
 
-type RegisterRequest struct {
-	Name        string
-	PhoneNumber string
-}
-type RegisterResponse struct {
-	User entity.User
-}
-
-func (s *Service) Register(req RegisterRequest) (RegisterResponse, error) {
-	//validate phone number
-	if !phonenumber.IsValid(req.PhoneNumber) {
-		return RegisterResponse{}, errors.New("invalid phone number")
-	}
-	//check uniq phone number
-	if isUnique, err := s.repo.IsPhoneNumberUnique(req.PhoneNumber); err != nil || !isUnique {
-		if err != nil {
-			return RegisterResponse{}, fmt.Errorf("unexpected error %w", err)
-		}
-		if !isUnique {
-			return RegisterResponse{}, fmt.Errorf("phone number %s is not unique", req.PhoneNumber)
-		}
-	}
-	//validate name
-	if len(req.Name) < 3 {
-		return RegisterResponse{}, fmt.Errorf("name is too short")
-	}
-	//create user to db
-	createdUser, err := s.repo.RegisterUser(entity.User{Name: req.Name, PhoneNumber: req.PhoneNumber})
-	if err != nil {
-		return RegisterResponse{}, fmt.Errorf("unexpected error %w", err)
-	}
-	//return user
-	return RegisterResponse{User: createdUser}, nil
+func getMD5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
 }

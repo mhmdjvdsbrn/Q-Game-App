@@ -1,6 +1,18 @@
 version: "3.9"
 
 services:
+  gameapp-redis:
+    image: redis:6.2.14
+    container_name: gameapp-redis
+    restart: always
+    ports:
+      - '6380:6379'
+    # TODO - remove `--save "" --appendonly no` from command to persist data
+    command: redis-server --loglevel warning --protected-mode no --save "" --appendonly no
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - gameapp-redis-data:/data
   gameapp_databse:
     image: mysql:8.1
     environment:
@@ -9,10 +21,11 @@ services:
       MYSQL_USER: myuser
       MYSQL_PASSWORD: mypassword
     ports:
-      - "3308:3306"
+      - "3306:3306"
     volumes:
       - dbdata:/var/lib/mysql
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
 
 volumes:
   dbdata:
+  gameapp-redis-data:

@@ -1,0 +1,8 @@
+package param
+
+type UserInfo struct {
+	ID          uint   `json:"id"`
+	PhoneNumber string `json:"phone_number"`
+	Name        string `json:"name"`
+	Role        string `json:"role"`
+}

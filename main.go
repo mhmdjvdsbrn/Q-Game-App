@@ -1,58 +1,73 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
+	"q-game-app/repository/mysql/mysqlaccesscontrol"
+	"q-game-app/repository/mysql/mysqluserrepository"
+	"q-game-app/validator/uservalidator/matchingvalidator"
+
+	"q-game-app/adapter/redis"
+	cfg "q-game-app/config"
+	"q-game-app/delivery/httpserver"
+	"q-game-app/repository/migratior"
+	"q-game-app/repository/redis/redismatching"
+	"q-game-app/service/authorizationservice"
+	"q-game-app/service/backofficeuserservice"
+	"q-game-app/service/matchingservice"
+	"q-game-app/validator/uservalidator"
 
 	"q-game-app/repository/mysql"
+	"q-game-app/service/authservice"
 	"q-game-app/service/userservice"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", healthCheckHandler)
-	mux.HandleFunc("/users/register-user", registerUserHandler)
+	// Load configuration
+	cfg := cfg.Load("config.yml")
 
+	// Run database migrations
+	mgr := migratior.New(cfg.Mysql)
+	mgr.Up()
+
+	// Setup all services
+	authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc, matchingSvc, matchingV := setupServices(cfg)
+
+	// Start HTTP server
+
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc,
+		matchingSvc, matchingV)
 	log.Println("Starting server on :8080...")
-	server := http.Server{Addr: ":8080", Handler: mux}
-	log.Fatal(server.ListenAndServe())
+	server.Serve()
 }
 
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "server is available")
-}
+func setupServices(cfg cfg.Config) (
+	authservice.Service,
+	userservice.Service,
+	uservalidator.Validator,
+	backofficeuserservice.Service,
+	authorizationservice.Service,
+	matchingservice.Service, matchingvalidator.Validator,
+) {
+	// Auth and user services
+	authSvc := authservice.New(cfg.Auth)
+	MySqlRepo := mysql.New(cfg.Mysql)
 
-func registerUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	userMysql := mysqluserrepository.New(MySqlRepo)
+	userSvc := userservice.New(userMysql, authSvc)
 
-	data, dErr := io.ReadAll(r.Body)
-	if dErr != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, dErr.Error()), http.StatusBadRequest)
-		return
-	}
+	userValidator := uservalidator.New(userMysql)
+	backofficeUserSvc := backofficeuserservice.New()
 
-	var uReq userservice.RegisterRequest
-	err := json.Unmarshal(data, &uReq)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, err.Error()), http.StatusBadRequest)
-		return
-	}
+	aclMysql := mysqlaccesscontrol.New(MySqlRepo)
 
-	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo)
-	_, sErr := userSvc.Register(uReq)
-	if sErr != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, sErr.Error()), http.StatusInternalServerError)
-		return
-	}
+	authorizationSvc := authorizationservice.New(aclMysql)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"success": "success"}`))
+	// Redis and matching services
+	matchingV := matchingvalidator.New()
+
+	redisAdapter := redis.New(cfg.Redis)
+	matchingRepo := redismatching.New(redisAdapter)
+	matchingSvc := matchingservice.New(cfg.MatchingService, matchingRepo)
+
+	return authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc, matchingSvc, matchingV
 }
