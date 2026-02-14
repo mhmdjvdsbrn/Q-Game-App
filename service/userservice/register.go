@@ -10,7 +10,8 @@ func (s Service) Register(req param.RegisterRequest) (param.RegisterResponse, er
 	const op = "service.Register"
 
 	//create user to db
-	createdUser, err := s.repo.RegisterUser(entity.User{Name: req.Name, PhoneNumber: req.PhoneNumber, Password: getMD5Hash(req.Password)})
+	createdUser, err := s.repo.RegisterUser(entity.User{Name: req.Name, PhoneNumber: req.PhoneNumber,
+		Password: getMD5Hash(req.Password), Role: entity.UserRole})
 	if err != nil {
 		return param.RegisterResponse{}, fmt.Errorf("unexpected error %w", err)
 	}
@@ -21,10 +22,12 @@ func (s Service) Register(req param.RegisterRequest) (param.RegisterResponse, er
 			ID          uint   `json:"id"`
 			PhoneNumber string `json:"phone_number"`
 			Name        string `json:"name"`
+			Role        string `json:"role"`
 		}{
 			ID:          createdUser.ID,
 			PhoneNumber: createdUser.PhoneNumber,
 			Name:        createdUser.Name,
+			Role:        createdUser.Role.String(),
 		},
 	}, nil
 }

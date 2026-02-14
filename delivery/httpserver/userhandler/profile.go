@@ -1,11 +1,10 @@
 package userhandler
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"q-game-app/delivery/httpserver/middleware"
 	"q-game-app/param"
+	"q-game-app/pkg/claim"
 )
 
 func (h Handler) userProfile(c echo.Context) error {
@@ -14,11 +13,10 @@ func (h Handler) userProfile(c echo.Context) error {
 	//if err != nil {
 	//	return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	//}
-	claim := middleware.GetClaim(c)
 
-	fmt.Println(claim)
+	cl := claim.GetClaimsFromEchoContext(c)
 	// call service
-	response, err := h.userSvc.Profile(param.ProfileRequest{UserID: claim.UserID})
+	response, err := h.userSvc.Profile(param.ProfileRequest{UserID: cl.UserID})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

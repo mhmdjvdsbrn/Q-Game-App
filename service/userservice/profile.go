@@ -10,5 +10,5 @@ func (s Service) Profile(req param.ProfileRequest) (param.ProfileResponse, error
 	if err != nil {
 		return param.ProfileResponse{}, fmt.Errorf("unexpected error %w", err)
 	}
-	return param.ProfileResponse{Name: user.Name}, nil
+	return param.ProfileResponse{Name: user.Name, Role: user.Role.String()}, nil
 }

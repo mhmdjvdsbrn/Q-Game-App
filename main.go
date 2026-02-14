@@ -1,12 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"q-game-app/repository/mysql/mysqlaccesscontrol"
+	"q-game-app/repository/mysql/mysqluserrepository"
+	"q-game-app/validator/uservalidator/matchingvalidator"
+
+	"q-game-app/adapter/redis"
 	cfg "q-game-app/config"
 	"q-game-app/delivery/httpserver"
 	"q-game-app/repository/migratior"
-
+	"q-game-app/repository/redis/redismatching"
+	"q-game-app/service/authorizationservice"
+	"q-game-app/service/backofficeuserservice"
+	"q-game-app/service/matchingservice"
 	"q-game-app/validator/uservalidator"
 
 	"q-game-app/repository/mysql"
@@ -14,57 +21,53 @@ import (
 	"q-game-app/service/userservice"
 )
 
-//const (
-//	jwtSecret = "my_super_secret_key_123"
-//
-//	AccessTokenExpireDuration  = time.Hour * 24
-//	cfg.RefreshTokenExpireDuration = time.Hour * 24 * 7
-//
-//	AccessTokenSubject  = "access"
-//	RefreshTokenSubject = "refresh"
-//
-//	DBUserName = "myuser"
-//	DBUserPass = "mypassword"
-//	DBHost     = "localhost"
-//	DBName     = "mydb"
-//	DBPort     = 3306
-//)
-
 func main() {
-	cfg2 := cfg.Load()
-	fmt.Println(cfg2)
-	cfg := cfg.Config{
-		HttpServer: cfg.HttpServer{Port: 8080},
-		Auth: authservice.Config{
-			AccessExpirationTime:  cfg.AccessTokenExpireDuration,
-			RefreshExpirationTime: cfg.RefreshTokenExpireDuration,
-			AccessSubject:         cfg.AccessTokenSubject,
-			RefreshSubject:        cfg.RefreshTokenSubject,
-		},
-		Mysql: mysql.Config{
-			Username: cfg.DBUserName,
-			Password: cfg.DBUserPass,
-			Port:     cfg.DBPort,
-			DBName:   cfg.DBName,
-			Host:     cfg.DBHost,
-		},
-	}
+	// Load configuration
+	cfg := cfg.Load("config.yml")
+
+	// Run database migrations
 	mgr := migratior.New(cfg.Mysql)
 	mgr.Up()
-	authSvc, userSvc, userValidator := setupServices(cfg)
 
-	server := httpserver.New(cfg, authSvc, userSvc, userValidator)
-	server.Serve()
+	// Setup all services
+	authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc, matchingSvc, matchingV := setupServices(cfg)
 
+	// Start HTTP server
+
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc,
+		matchingSvc, matchingV)
 	log.Println("Starting server on :8080...")
+	server.Serve()
 }
-func setupServices(cfg cfg.Config) (authservice.Service, userservice.Service, uservalidator.Validator) {
+
+func setupServices(cfg cfg.Config) (
+	authservice.Service,
+	userservice.Service,
+	uservalidator.Validator,
+	backofficeuserservice.Service,
+	authorizationservice.Service,
+	matchingservice.Service, matchingvalidator.Validator,
+) {
+	// Auth and user services
 	authSvc := authservice.New(cfg.Auth)
+	MySqlRepo := mysql.New(cfg.Mysql)
 
-	mysqlRepo := mysql.New(cfg.Mysql)
+	userMysql := mysqluserrepository.New(MySqlRepo)
+	userSvc := userservice.New(userMysql, authSvc)
 
-	userSvc := userservice.New(mysqlRepo, authSvc)
-	userValidator := uservalidator.New(mysqlRepo)
+	userValidator := uservalidator.New(userMysql)
+	backofficeUserSvc := backofficeuserservice.New()
 
-	return authSvc, userSvc, userValidator
+	aclMysql := mysqlaccesscontrol.New(MySqlRepo)
+
+	authorizationSvc := authorizationservice.New(aclMysql)
+
+	// Redis and matching services
+	matchingV := matchingvalidator.New()
+
+	redisAdapter := redis.New(cfg.Redis)
+	matchingRepo := redismatching.New(redisAdapter)
+	matchingSvc := matchingservice.New(cfg.MatchingService, matchingRepo)
+
+	return authSvc, userSvc, userValidator, backofficeUserSvc, authorizationSvc, matchingSvc, matchingV
 }

@@ -9,5 +9,5 @@ func (h Handler) SetUserRoutes(e *echo.Echo) {
 	userGroup := e.Group("/users")
 	userGroup.POST("/register-user", h.userRegister)
 	userGroup.POST("/login", h.userLogin)
-	userGroup.GET("/profile", h.userProfile, middleware.AuthMiddleware(h.authSvc, h.authConfig))
+	userGroup.GET("/profile", h.userProfile, middleware.Auth(h.authSvc, h.authConfig))
 }

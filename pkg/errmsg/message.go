@@ -12,4 +12,6 @@ const (
 	ErrorMsgPasswordLetterTwelve      = "password letter twelve is wrong"
 	ErrorMsgStartedWithZeroNine       = "password must be started with zero and nine"
 	ErrorMsgMustInt                   = "password must be integer"
+	ErrorMsgUserNotAllowed            = "user not allowed"
+	ErrorMsgCategoryIsNotValid        = "Category is not valid"
 )
